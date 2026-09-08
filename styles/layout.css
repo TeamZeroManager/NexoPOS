@@ -1,0 +1,155 @@
+/**
+ * layout.css
+ * ---------------------------------------------------------
+ * Responsabilidad:
+ *   Definir la estructura macro de la pantalla del POS: barra
+ *   superior + dos columnas (Productos | Carrito), tal como pide
+ *   la sección 17 del spec. La composición interna de cada tarjeta
+ *   o botón vive en components.css.
+ */
+
+.app-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Barra superior ---------- */
+
+.topbar {
+  height: var(--topbar-height);
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 var(--space-5);
+}
+
+.topbar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  white-space: nowrap;
+}
+
+.topbar__brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.topbar__search {
+  flex: 1;
+  max-width: 480px;
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ---------- Cuerpo: dos columnas ---------- */
+
+.main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: var(--cart-width) 1fr;
+  min-height: 0; /* permite scroll interno en cada columna */
+}
+
+.panel-products {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--space-5);
+  gap: var(--space-4);
+  overflow-y: auto;
+}
+
+.panel-cart {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+
+/* ---------- Barra de herramientas de productos ---------- */
+
+.products-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.products-toolbar__actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* ---------- Categorías ---------- */
+
+.category-bar {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- Grilla de productos ---------- */
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: var(--space-3);
+  align-content: start;
+}
+
+/* ---------- Carrito ---------- */
+
+.cart-header .cart-close-mobile {
+  display: none;
+}
+
+.cart-header {
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cart-items {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cart-summary {
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--color-surface);
+}
+
+/* ---------- Barra flotante de carrito (solo móvil) ---------- */
+
+.mobile-cart-bar {
+  display: none;
+}

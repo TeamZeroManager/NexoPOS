@@ -1,0 +1,130 @@
+/**
+ * responsive.css
+ * ---------------------------------------------------------
+ * Responsabilidad:
+ *   Adaptar el layout de dos columnas a tablet y móvil.
+ *   Prioridad PC + tablet (sección 41); en móvil el carrito se
+ *   convierte en una barra flotante con acceso a pantalla completa.
+ *
+ * Breakpoints:
+ *   >= 1024px  Escritorio: layout completo de 2 columnas.
+ *   768–1023px Tablet: mismo layout, grilla de productos más compacta.
+ *   < 768px    Móvil: una columna; el carrito se abre como panel.
+ */
+
+/* ---------- Tablet ---------- */
+@media (max-width: 1023px) {
+  :root {
+    --cart-width: 320px;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  }
+}
+
+/* ---------- Móvil ---------- */
+@media (max-width: 767px) {
+  .topbar {
+    padding: 0 var(--space-3);
+    gap: var(--space-2);
+    overflow-x: auto;
+  }
+
+  .topbar__brand span {
+    display: none; /* solo el ícono de marca en móvil */
+  }
+
+  /* La búsqueda pasa a un ícono/pantalla dedicada en fases siguientes */
+  .topbar__search {
+    display: none;
+  }
+
+  .topbar__actions {
+    flex-shrink: 0;
+  }
+
+  .main {
+    grid-template-columns: 1fr;
+    padding-bottom: 72px; /* espacio para la barra flotante */
+  }
+
+  .panel-products {
+    padding: var(--space-3);
+  }
+
+  /* El carrito se oculta como columna fija y se abre como panel modal */
+  .panel-cart {
+    position: fixed;
+    inset: 0;
+    top: var(--topbar-height);
+    border-left: none;
+    border-right: none;
+    transform: translateY(100%);
+    transition: transform 0.2s ease;
+    z-index: 40;
+  }
+
+  .panel-cart[data-open="true"] {
+    transform: translateY(0);
+  }
+
+  .cart-header .cart-close-mobile {
+    display: inline-flex;
+  }
+
+  .products-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .products-toolbar__actions {
+    justify-content: flex-end;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: var(--space-2);
+  }
+
+  .product-card__footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  /* Barra flotante inferior: total + botón "Ver carrito" */
+  .mobile-cart-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    position: fixed;
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: var(--space-3);
+    height: 56px;
+    padding: 0 var(--space-4);
+    background: var(--color-primary);
+    color: var(--color-primary-ink);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    z-index: 45;
+  }
+
+  .mobile-cart-bar__total {
+    font-family: var(--font-money);
+    font-weight: 600;
+    font-size: var(--text-lg);
+  }
+
+  .money-keyboard {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-1);
+  }
+
+  .modal {
+    max-width: 100%;
+  }
+}

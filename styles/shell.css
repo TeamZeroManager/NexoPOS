@@ -1,0 +1,436 @@
+/**
+ * shell.css
+ * ---------------------------------------------------------
+ * Responsabilidad: la "cáscara" de la aplicación fuera del POS:
+ * asistente de configuración inicial (Fase 0), login, y el panel
+ * con barra lateral que aloja Resumen / Punto de Venta / Usuarios /
+ * Roles y permisos / etc.
+ *
+ * El POS en sí (topbar + productos + carrito) NO cambia — vive
+ * dentro de #pagePOS, dentro de .panel-content__body.
+ */
+
+html, body {
+  height: 100%;
+}
+
+#appRoot {
+  height: 100vh;
+}
+
+/* ============ Tokens propios del shell oscuro ============ */
+:root {
+  --color-sidebar-bg: #16221B;
+  --color-sidebar-text: #AEBBB2;
+  --color-sidebar-text-active: #FFFFFF;
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+}
+
+/* ============ Setup (Fase 0) ============ */
+
+.setup-screen {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+}
+
+.setup-screen__brand {
+  background: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+}
+
+.setup-screen__logo {
+  font-family: var(--font-money);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: #fff;
+}
+
+.setup-screen__logo span {
+  color: var(--color-secondary);
+}
+
+.setup-screen__boot {
+  margin-top: var(--space-7);
+  font-family: var(--font-money);
+  font-size: var(--text-xs);
+  line-height: 1.8;
+  color: var(--color-sidebar-text);
+  white-space: pre-line;
+}
+
+.setup-screen__boot .ready-line {
+  color: var(--color-secondary);
+}
+
+.setup-screen__footer {
+  margin-top: auto;
+  font-size: var(--text-xs);
+  color: var(--color-sidebar-text);
+  opacity: 0.7;
+}
+
+.setup-screen__form {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-6) var(--space-7);
+}
+
+.setup-screen__form-inner {
+  max-width: 520px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.eyebrow {
+  font-family: var(--font-money);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  color: var(--color-secondary);
+  font-weight: 600;
+}
+
+.setup-screen__form h1 {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+}
+
+.setup-screen__form p {
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+
+.field-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+/* ============ Login ============ */
+
+.login-screen {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.login-card__logo {
+  font-family: var(--font-money);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.login-card__logo span {
+  color: var(--color-primary);
+}
+
+/* ============ Panel (post-login) ============ */
+
+.panel-shell {
+  height: 100vh;
+  display: flex;
+}
+
+.sidebar {
+  width: 232px;
+  flex-shrink: 0;
+  background: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) 0;
+}
+
+.sidebar__brand {
+  font-family: var(--font-money);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: #fff;
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.sidebar__brand span {
+  color: var(--color-secondary);
+}
+
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-sidebar-text);
+  text-align: left;
+  border-left: 3px solid transparent;
+}
+
+.sidebar__item:hover {
+  color: var(--color-sidebar-text-active);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sidebar__item[aria-current="true"] {
+  color: var(--color-sidebar-text-active);
+  background: rgba(255, 255, 255, 0.06);
+  border-left-color: var(--color-secondary);
+  font-weight: 600;
+}
+
+.sidebar__footer {
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-sidebar-border);
+}
+
+.sidebar__footer .btn--ghost {
+  color: var(--color-sidebar-text);
+  width: 100%;
+}
+
+.sidebar__footer .btn--ghost:hover {
+  color: var(--color-sidebar-text-active);
+}
+
+.panel-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.panel-content__header {
+  flex-shrink: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.panel-content__header h1 {
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.panel-content__user {
+  text-align: right;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.4;
+}
+
+.panel-content__user strong {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+}
+
+.panel-content__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+
+.page {
+  height: 100%;
+}
+
+/* La página del POS reutiliza .app-shell tal cual, pero ya no ocupa
+   el viewport completo — ocupa el alto disponible dentro de .page. */
+#pagePOS.page {
+  padding: 0;
+  margin: calc(var(--space-5) * -1);
+}
+
+/* ============ Piezas genéricas para las páginas nuevas ============ */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.stat-card {
+  background: var(--color-ink);
+  color: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.stat-card__value {
+  font-family: var(--font-money);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--color-secondary);
+}
+
+.stat-card__label {
+  font-size: var(--text-xs);
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 4px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.data-table th {
+  text-align: left;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.data-table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.card-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.permission-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-5);
+}
+
+.permission-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+}
+
+/* ============ Responsive ============ */
+
+@media (max-width: 900px) {
+  .setup-screen {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+  .setup-screen__brand {
+    padding: var(--space-4);
+  }
+  .setup-screen__boot {
+    display: none;
+  }
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-shell {
+    flex-direction: column;
+    height: 100vh;
+  }
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--space-2);
+    overflow-x: auto;
+  }
+  .sidebar__brand {
+    padding: 0 var(--space-3);
+    flex-shrink: 0;
+  }
+  .sidebar__nav {
+    flex-direction: row;
+    overflow-x: auto;
+    flex: 1;
+  }
+  .sidebar__item {
+    flex-shrink: 0;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+  }
+  .sidebar__item[aria-current="true"] {
+    border-left-color: transparent;
+    border-bottom-color: var(--color-secondary);
+  }
+  .sidebar__footer {
+    border-top: none;
+    padding: 0 var(--space-3);
+    flex-shrink: 0;
+  }
+  .sidebar__footer .btn--ghost {
+    width: auto;
+    white-space: nowrap;
+  }
+  .panel-content {
+    height: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .permission-grid {
+    grid-template-columns: 1fr;
+  }
+}

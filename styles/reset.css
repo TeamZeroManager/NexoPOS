@@ -1,0 +1,64 @@
+/**
+ * reset.css
+ * ---------------------------------------------------------
+ * Responsabilidad: normalizar comportamientos por defecto del
+ * navegador antes de aplicar el diseño propio de POS-Pro.
+ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  color-scheme: light;
+}
+
+body {
+  font-family: var(--font-ui);
+  color: var(--color-ink);
+  background: var(--color-bg);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, picture {
+  display: block;
+  max-width: 100%;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Foco visible siempre (accesibilidad, sección de calidad del skill de diseño) */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
