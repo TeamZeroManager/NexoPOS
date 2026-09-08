@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>POS-Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/variables.css">
+  <link rel="stylesheet" href="styles/reset.css">
+  <link rel="stylesheet" href="styles/layout.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="stylesheet" href="styles/shell.css">
+  <link rel="stylesheet" href="styles/responsive.css">
+</head>
+<body>
+
+  <div id="appRoot">
+
+    <!-- ================================================================
+         FASE 0 — Configuración inicial (solo la primera vez)
+         ================================================================ -->
+    <div id="viewSetup" class="setup-screen">
+      <aside class="setup-screen__brand">
+        <div class="setup-screen__logo">Nexo<span>POS</span></div>
+        <div class="setup-screen__boot">INICIALIZANDO SISTEMA POS
+------------------------------
+MODULO: TENANCY
+MODULO: AUTH
+MODULO: RBAC
+------------------------------
+<span class="ready-line">&gt; LISTO PARA CONFIGURAR NEGOCIO</span></div>
+        <div class="setup-screen__footer">NexoPOS — Tenancy · Auth · RBAC</div>
+      </aside>
+
+      <div class="setup-screen__form">
+        <form id="setupForm" class="setup-screen__form-inner">
+          <span class="eyebrow">CONFIGURACIÓN INICIAL</span>
+          <h1>Crea tu negocio</h1>
+          <p>Este paso solo aparece una vez. Define tu negocio, tu primera sucursal, tu primera caja y tu usuario administrador.</p>
+
+          <label class="field-label">
+            Nombre del negocio
+            <input class="search-input" name="businessName" required placeholder="Ej: Hotel Ferroviario">
+          </label>
+
+          <label class="field-label">
+            NIT / Identificación (opcional)
+            <input class="search-input" name="nit" placeholder="Ej: 900123456-7">
+          </label>
+
+          <div class="field-row">
+            <label class="field-label">
+              Sucursal principal
+              <input class="search-input" name="branchName" required placeholder="Sede principal" value="Sede principal">
+            </label>
+            <label class="field-label">
+              Nombre de la caja
+              <input class="search-input" name="cashPointName" required placeholder="Caja 1" value="Caja 1">
+            </label>
+          </div>
+
+          <label class="field-label">
+            Nombre del administrador
+            <input class="search-input" name="adminName" required placeholder="Tu nombre completo">
+          </label>
+
+          <div class="field-row">
+            <label class="field-label">
+              Usuario
+              <input class="search-input" name="username" required placeholder="admin" autocomplete="off">
+            </label>
+            <label class="field-label">
+              Contraseña
+              <input class="search-input" name="password" type="password" required placeholder="Mínimo 6 caracteres">
+            </label>
+          </div>
+
+          <button type="submit" class="btn btn--primary" style="height:48px;">Crear sistema</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ================================================================
+         LOGIN (visitas siguientes)
+         ================================================================ -->
+    <div id="viewLogin" class="login-screen" style="display:none;">
+      <form id="loginForm" class="login-card">
+        <div class="login-card__logo">Nexo<span>POS</span></div>
+        <label class="field-label">
+          Usuario
+          <input class="search-input" name="username" required autocomplete="username">
+        </label>
+        <label class="field-label">
+          Contraseña
+          <input class="search-input" name="password" type="password" required autocomplete="current-password">
+        </label>
+        <button type="submit" class="btn btn--primary" style="height:48px;">Ingresar</button>
+      </form>
+    </div>
+
+    <!-- ================================================================
+         PANEL (después de iniciar sesión)
+         ================================================================ -->
+    <div id="viewPanel" class="panel-shell" style="display:none;">
+
+      <aside class="sidebar">
+        <div class="sidebar__brand">Nexo<span>POS</span></div>
+        <nav class="sidebar__nav" id="sidebarNav"></nav>
+        <div class="sidebar__footer">
+          <button class="btn btn--ghost" id="btnLogout">Cerrar sesión</button>
+        </div>
+      </aside>
+
+      <div class="panel-content">
+        <header class="panel-content__header">
+          <h1 id="panelTitle">Resumen</h1>
+          <div class="panel-content__user">
+            <strong id="sessionUserName">—</strong>
+            <span id="sessionRoleName">—</span>
+          </div>
+        </header>
+
+        <div class="panel-content__body">
+
+          <div id="pageResumen" class="page"></div>
+
+          <div id="pagePOS" class="page" style="display:none;">
+            <div class="app-shell">
+
+              <header class="topbar">
+                <div class="topbar__brand">
+                  <div class="topbar__brand-mark" aria-hidden="true"></div>
+                  <span id="posBrandName">Negocio</span>
+                </div>
+
+                <div class="topbar__search">
+                  <input class="search-input" id="searchInput" type="search" placeholder="Buscar producto o código..." aria-label="Buscar producto">
+                </div>
+
+                <div class="topbar__actions">
+                  <button class="badge badge--success" id="btnCash" style="border:none; cursor:pointer;">Caja: cargando…</button>
+                  <button class="btn btn--secondary" id="btnMovements">Movimientos</button>
+                  <button class="btn btn--secondary" id="btnFiados">Fiados</button>
+                  <button class="btn btn--secondary" id="btnHeldSales">Ventas en espera <span id="heldSalesCount">· 0</span></button>
+                </div>
+              </header>
+
+              <main class="main">
+
+                <aside class="panel-cart" aria-label="Carrito de venta">
+                  <div class="cart-header">
+                    <button class="btn btn--ghost cart-close-mobile" id="btnCloseCartMobile" style="align-self:flex-start;">← Volver a productos</button>
+                    <div class="customer-card">
+                      <span>Cliente: <strong id="cartCustomerName">Mostrador</strong></span>
+                      <button class="btn btn--ghost" id="btnChangeCustomer" style="height:32px;padding:0 8px;">Cambiar</button>
+                    </div>
+                  </div>
+
+                  <div class="cart-items" id="cartItems"></div>
+
+                  <div class="cart-summary">
+                    <div class="summary-row">
+                      <span>Subtotal</span>
+                      <span class="summary-row__value" id="cartSubtotal">$0</span>
+                    </div>
+                    <div class="summary-row">
+                      <span>Descuento</span>
+                      <span class="summary-row__value" id="cartDiscount">–$0</span>
+                    </div>
+                    <div class="summary-row summary-row--total">
+                      <span>Total</span>
+                      <span class="summary-row__value" id="cartTotal">$0</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                      <button class="btn btn--secondary" id="btnHoldSale" style="flex:1;">En espera</button>
+                      <button class="btn btn--ghost" id="btnClearCart">Vaciar</button>
+                    </div>
+                    <button class="btn btn--primary btn--pay" id="btnPay">Cobrar</button>
+                  </div>
+                </aside>
+
+                <section class="panel-products" aria-label="Productos">
+                  <div class="products-toolbar">
+                    <nav class="category-bar" id="categoryBar" aria-label="Categorías"></nav>
+                    <div class="products-toolbar__actions">
+                      <button class="btn btn--secondary" id="btnManageCategories">Categorías</button>
+                      <button class="btn btn--primary" id="btnCreateProduct">+ Crear producto</button>
+                    </div>
+                  </div>
+                  <div class="product-grid" id="productGrid"></div>
+                </section>
+
+              </main>
+
+              <nav class="mobile-cart-bar" id="mobileCartBar">
+                <span class="mobile-cart-bar__total" id="mobileCartTotal">$0 · 0 items</span>
+                <button class="btn" id="btnOpenCartMobile" style="background:transparent;color:inherit;height:auto;padding:0;font-weight:600;">Ver carrito</button>
+              </nav>
+
+            </div>
+          </div>
+
+          <div id="pageVentas" class="page" style="display:none;"></div>
+          <div id="pageClientes" class="page" style="display:none;"></div>
+          <div id="pageCaja" class="page" style="display:none;"></div>
+          <div id="pageUsuarios" class="page" style="display:none;"></div>
+          <div id="pageRoles" class="page" style="display:none;"></div>
+          <div id="pagePlaceholder" class="page" style="display:none;"></div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
