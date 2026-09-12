@@ -28,6 +28,10 @@ export function makeCustomerUseCases({ customerRepository, saleRepository, movem
     },
 
     async registerPayment(customerId, amount) {
+      if (customerRepository.registerPaymentTransactional) {
+        return customerRepository.registerPaymentTransactional(customerId, amount);
+      }
+
       const customer = await customerRepository.findById(customerId);
       if (!customer) throw new Error('Cliente no encontrado');
       assertValidPayment(customer.currentDebt, amount); // lanza ValidationError si no es válido

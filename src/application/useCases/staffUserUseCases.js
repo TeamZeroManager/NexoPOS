@@ -21,6 +21,13 @@ export function makeStaffUserUseCases({ staffUserRepository, roleRepository }) {
 
     async createUser({ name, username, password, roleId }) {
       assertPasswordStrength(password);
+
+      if (staffUserRepository.createViaEdgeFunction) {
+        // Supabase: crea el usuario de Auth + su fila en "usuarios" sin
+        // reemplazar la sesión de quien lo está creando (Edge Function).
+        return staffUserRepository.createViaEdgeFunction({ nombre: name, username, password, rolId: roleId });
+      }
+
       const existingUsers = await staffUserRepository.findAll();
       assertUniqueUsername(existingUsers, username);
 

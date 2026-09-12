@@ -73,6 +73,13 @@ export function makeSaleUseCases({ productRepository, saleRepository, customerRe
         throw new ValidationError('No hay productos en el carrito', 'items');
       }
 
+      // Backend con transacciones reales (Supabase): la venta completa
+      // (venta + detalle + stock + caja) ocurre atómica en la base de
+      // datos — ver registrar_venta() en supabase/schema.sql.
+      if (saleRepository.completeSaleTransactional) {
+        return saleRepository.completeSaleTransactional({ items, paymentMethod, customerId, received });
+      }
+
       const subtotal = calculateSaleSubtotal(items);
       const discount = calculateSaleDiscount(items);
       const total = calculateSaleTotal(subtotal, discount);
@@ -133,6 +140,10 @@ export function makeSaleUseCases({ productRepository, saleRepository, customerRe
       }
       if (!customerId) {
         throw new ValidationError('Selecciona un cliente para fiar la venta', 'customerId');
+      }
+
+      if (saleRepository.registerCreditSaleTransactional) {
+        return saleRepository.registerCreditSaleTransactional({ items, customerId });
       }
 
       const customer = await customerRepository.findById(customerId);
