@@ -4,7 +4,6 @@ import { renderEmptyState } from '../components/emptyState.js';
 import { openProductFormModal } from '../components/productFormModal.js';
 import { openCategoryManagerModal } from '../components/categoryManagerModal.js';
 import { showToast } from '../components/toast.js';
-import { confirmDialog } from '../components/confirmDialog.js';
 
 /**
  * initPosScreen
@@ -99,21 +98,6 @@ export function initPosScreen({ productUseCases, categoryUseCases, cartStore }) 
               cartStore.addItem(p, 1);
             } catch (error) {
               // p.ej. "Stock insuficiente" (validateStock)
-              showToast(error.message, 'danger');
-            }
-          },
-          onDelete: async (p) => {
-            const confirmed = await confirmDialog({
-              title: 'Eliminar producto',
-              message: `¿Eliminar "${p.name}"? El producto dejará de aparecer en el POS, pero se conserva su registro para no romper el historial de ventas.`,
-              confirmLabel: 'Eliminar',
-            });
-            if (!confirmed) return;
-            try {
-              await productUseCases.deactivateProduct(p.id);
-              showToast('Producto eliminado', 'success');
-              await refreshProductGrid();
-            } catch (error) {
               showToast(error.message, 'danger');
             }
           },
