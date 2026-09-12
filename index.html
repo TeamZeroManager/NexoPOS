@@ -22,7 +22,7 @@
          ================================================================ -->
     <div id="viewSetup" class="setup-screen">
       <aside class="setup-screen__brand">
-        <div class="setup-screen__logo">Nexo<span>POS</span></div>
+        <div class="setup-screen__logo">POS<span>-Pro</span></div>
         <div class="setup-screen__boot">INICIALIZANDO SISTEMA POS
 ------------------------------
 MODULO: TENANCY
@@ -30,7 +30,7 @@ MODULO: AUTH
 MODULO: RBAC
 ------------------------------
 <span class="ready-line">&gt; LISTO PARA CONFIGURAR NEGOCIO</span></div>
-        <div class="setup-screen__footer">NexoPOS — Tenancy · Auth · RBAC</div>
+        <div class="setup-screen__footer">Fase 0 — Tenancy · Auth · RBAC</div>
       </aside>
 
       <div class="setup-screen__form">
@@ -77,6 +77,7 @@ MODULO: RBAC
           </div>
 
           <button type="submit" class="btn btn--primary" style="height:48px;">Crear sistema</button>
+          <button type="button" id="btnGoToLogin" class="btn btn--ghost" style="height:36px;">¿Ya tienes cuenta? Inicia sesión</button>
         </form>
       </div>
     </div>
@@ -86,7 +87,7 @@ MODULO: RBAC
          ================================================================ -->
     <div id="viewLogin" class="login-screen" style="display:none;">
       <form id="loginForm" class="login-card">
-        <div class="login-card__logo">Nexo<span>POS</span></div>
+        <div class="login-card__logo">POS<span>-Pro</span></div>
         <label class="field-label">
           Usuario
           <input class="search-input" name="username" required autocomplete="username">
@@ -96,6 +97,7 @@ MODULO: RBAC
           <input class="search-input" name="password" type="password" required autocomplete="current-password">
         </label>
         <button type="submit" class="btn btn--primary" style="height:48px;">Ingresar</button>
+        <button type="button" id="btnGoToSetup" class="btn btn--ghost" style="height:36px;">¿Nuevo negocio? Crea tu cuenta</button>
       </form>
     </div>
 
@@ -105,7 +107,7 @@ MODULO: RBAC
     <div id="viewPanel" class="panel-shell" style="display:none;">
 
       <aside class="sidebar">
-        <div class="sidebar__brand">Nexo<span>POS</span></div>
+        <div class="sidebar__brand">POS<span>-Pro</span></div>
         <nav class="sidebar__nav" id="sidebarNav"></nav>
         <div class="sidebar__footer">
           <button class="btn btn--ghost" id="btnLogout">Cerrar sesión</button>

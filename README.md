@@ -1,4 +1,132 @@
-# POS-Pro — Fase 0 a 8: Tenancy/Auth/RBAC + Arquitectura + POS completo
+# POS-Pro — Migrado a Supabase/PostgreSQL (multi-dispositivo, multi-tenant)
+
+## 🚀 Migración a Supabase — LEE ESTO PRIMERO
+
+El sistema pasó de `localStorage` (un solo navegador) a **Supabase/PostgreSQL**
+real, para que el cajero, el administrador y el celular trabajen sobre los
+mismos datos al mismo tiempo. Proyecto Supabase: **NexoPOS**
+(`txnshyzmzznammjstphn`), ya configurado y en producción — no necesitas crear
+nada, solo dos ajustes de una sola vez en el dashboard (ver abajo).
+
+### Diagnóstico (lo que pedías antes de tocar código)
+
+| Pregunta | Respuesta |
+|---|---|
+| ¿Qué existe actualmente? | Arquitectura por capas completa (domain/application/infrastructure/presentation), 100% funcional, 8 fases construidas |
+| ¿Qué funcionaba con localStorage? | Todo — un único `StorageAdapter` era el único archivo que tocaba `localStorage` |
+| ¿Qué archivos eran responsables de la persistencia? | Los 11 `LocalStorage*Repository.js` en `infrastructure/repositories/` — **siguen ahí, sin tocar**, por si los necesitas de referencia |
+| ¿Qué tablas necesitaba la base de datos? | 13 tablas (ver `supabase/schema.sql`) — mapeadas 1:1 a las entidades que ya existían, sin inventar de más |
+| ¿Qué archivos se modificaron? | `main.js` (el único punto de ensamblaje, tal como estaba diseñado), `saleUseCases.js` y `customerUseCases.js` (para usar transacciones atómicas reales cuando el repositorio las ofrece), `staffUserUseCases.js` (para crear usuarios vía Edge Function) |
+| ¿Qué archivos nuevos se crearon? | 10 `Supabase*Repository.js`, `supabaseClient.js`, `supabaseSession.js`, `supabaseAuthUseCases.js`, `supabaseSetupUseCases.js`, `supabase/schema.sql`, `supabase/functions/create-staff-user/` |
+| ¿Qué NO se tocó? | **Todo `domain/`** (entidades, reglas, cálculos), **todo `presentation/`** (pantallas, carrito, modales), los 11 `LocalStorage*Repository.js`, y las firmas públicas de los casos de uso |
+
+### ⚠️ Dos ajustes obligatorios antes de usarlo (una sola vez)
+
+1. **Desactivar confirmación de correo**: en el dashboard de Supabase →
+   *Authentication → Providers → Email → "Confirm email"* → **desactívalo**.
+   El login usa un correo interno (`usuario@pos.local`, nunca llega a una
+   bandeja real), así que si esto queda activado el registro se queda a
+   medias esperando un correo que nunca llegará.
+2. **Correr `npm start`** — el proyecto sigue sin bundler; `supabase-js` se
+   carga por CDN (`esm.sh`) como módulo ES6, igual que las demás librerías
+   del proyecto. Necesitas conexión a internet real (mi entorno de pruebas
+   no tuvo salida a `supabase.co`, así que no pude verificar el flujo
+   completo en navegador — sí verifiqué toda la lógica SQL directamente en
+   la base de datos, ver más abajo).
+
+### Qué cambió de verdad (y por qué)
+
+- **`main.js`**: instancia `Supabase*Repository` en vez de `LocalStorage*Repository`.
+  Ningún caso de uso, ninguna pantalla, ningún componente tuvo que cambiar
+  para esto — exactamente como pedía el documento.
+- **Ventas atómicas de verdad**: `registrar_venta()` y `registrar_venta_fiada()`
+  son funciones de PostgreSQL (`supabase/schema.sql`) que hacen venta +
+  detalle + descuento de stock + movimiento de caja en **una sola
+  transacción**. Si falla cualquier parte (ej. stock insuficiente), no
+  queda nada a medias — lo probé directamente en la base de datos: pedí
+  999 unidades de un producto con 8 en stock, la función rechazó la venta,
+  y confirmé que el stock, la tabla de ventas y los movimientos quedaron
+  exactamente igual que antes del intento.
+- **`saleUseCases.completeSale()` / `registerCreditSale()`**: ahora
+  verifican si el repositorio inyectado tiene un método
+  `completeSaleTransactional` — si existe (Supabase), lo usa; si no
+  (LocalStorage), sigue la lógica paso a paso de siempre. Mismo patrón
+  para el abono de fiados (`registrar_abono`).
+- **Historial de precios**: `detalle_ventas` guarda `nombre`/`precio`
+  congelados dentro de la misma transacción — nunca se reconstruye desde
+  el precio actual del producto (lo verifiqué: vendí a $2.800, el
+  registro quedó en $2.800 aunque el producto cambie de precio después).
+- **Historial de inventario** (pedido explícito del documento, no existía
+  antes): tabla nueva `movimientos_inventario`, con un registro por cada
+  venta (`VENTA`, cantidad negativa) — lista para sumar `COMPRA`/`AJUSTE`/
+  `DEVOLUCION` cuando construyas esos módulos.
+- **Multi-tenant real con RLS**: cada tabla de negocio tiene `empresa_id`
+  y una política de PostgreSQL que compara contra `current_empresa_id()`
+  (resuelto desde `auth.uid()`, nunca desde un valor que mande el
+  navegador). Una empresa físicamente no puede leer ni escribir filas de
+  otra, sin importar lo que haga el JavaScript del cliente.
+- **Login migrado a Supabase Auth** (como pediste): el username visible
+  se traduce internamente a `usuario@pos.local` para que Supabase Auth
+  tenga un correo con qué trabajar — el flujo visual (Usuario/Contraseña)
+  no cambió. El username es único en todo el proyecto (no solo por
+  empresa) a propósito: así el login funciona desde un dispositivo que
+  nunca ha visto esa empresa antes (el celular del administrador, una PC
+  nueva del cajero), sin tener que saber de antemano a qué negocio
+  pertenece — requisito clave para que "varios dispositivos trabajen
+  sobre la misma información" funcione desde el primer login.
+- **Crear usuarios sin cerrar tu sesión**: como Supabase Auth no permite
+  crear otro usuario desde el cliente sin reemplazar la sesión activa,
+  la creación de cajeros/administradores pasa por una **Edge Function**
+  (`create-staff-user`) que usa la `service_role` key del lado del
+  servidor — nunca expuesta al navegador — y valida que quien la llama
+  tenga permiso `MANAGE_USERS` antes de crear a nadie.
+- **"¿Ya hay un negocio configurado?" cambió de sentido**: en localStorage
+  esa pregunta era global (un navegador = un negocio). En Supabase pueden
+  existir muchas empresas en la misma base — por eso la pantalla de
+  entrada por defecto ahora es el **login**, con un enlace "¿Nuevo
+  negocio? Crea tu cuenta" para llegar al asistente de configuración.
+
+### Cómo verifiqué que funciona (sin poder abrir un navegador con red real)
+
+Ejecuté la lógica SQL directamente contra la base de datos real (proyecto
+NexoPOS), simulando sesiones autenticadas:
+- ✅ `setup_business()`: crea empresa + sucursal + rol Administrador (con
+  todos los permisos) + usuario, todo o nada.
+- ✅ `registrar_venta()`: vendí 2 Coca-Colas a $2.800 c/u — subtotal,
+  total, cambio, descuento de stock (10→8), precio congelado en el
+  detalle, y movimiento de caja, todos correctos.
+- ✅ Atomicidad: un intento de vender 999 unidades con 8 en stock fue
+  rechazado, y confirmé que ni el stock ni el conteo de ventas cambiaron
+  — cero datos a medias.
+- ✅ RLS: revisé cada política con `pg_policies` y confirmé que
+  `anon` no tiene ningún permiso sobre las tablas de negocio.
+
+Lo único que no pude probar end-to-end fue el flujo completo desde el
+navegador (mi entorno de pruebas no tiene salida de red hacia
+`supabase.co`). Te recomiendo correr `npm start` en tu máquina y probar:
+crear el negocio, cerrar sesión, iniciar sesión desde otra pestaña
+(simulando otro dispositivo), y confirmar que ves los mismos datos.
+
+### Bug encontrado ya en uso real (corregido)
+
+Al probarlo en tu navegador, `setup_business()` fallaba con
+`new row violates row-level security policy for table "empresas"` —
+confirmado en los logs de Postgres del proyecto. La causa: esa función
+era `SECURITY INVOKER` (corre con los permisos de quien la llama) y
+dependía de que la política RLS de `empresas` viera `auth.uid()` en el
+momento exacto del INSERT dentro de la función — algo que en la
+práctica no era fiable. Las demás funciones críticas (`registrar_venta`,
+`registrar_venta_fiada`, `registrar_abono`) ya eran `SECURITY DEFINER`
+con una validación manual de `auth.uid()` adentro, y esas nunca
+fallaron. Se alineó `setup_business` al mismo patrón, y de paso se
+cerraron las políticas de `INSERT` de `empresas`/`sucursales`/`roles`/
+`usuarios` que habían quedado más abiertas de lo necesario como parche
+temporal — ya no hacía falta, porque crear un negocio o un usuario
+ahora solo puede pasar por las funciones `SECURITY DEFINER` (o la Edge
+Function, para usuarios adicionales). Verificado de nuevo en la base de
+datos real tras el fix: `setup_business()` completa correctamente.
+
+---
 
 Este es el núcleo de negocio de POS-Pro, construido para sobrevivir a
 futuras migraciones (TypeScript → React/Vue/Angular → API → Backend →
@@ -212,9 +340,10 @@ npm start
 autenticación (contraseñas, credenciales) sin necesidad de navegador.
 
 `server.js` es un servidor estático de una sola función, sin
-dependencias externas (no se instala nada, no se conecta a internet).
-Esto es solo para desarrollo local; cuando exista backend (Fase 5-6)
-dejará de ser necesario.
+dependencias externas — solo sirve los archivos locales. La app SÍ
+necesita internet real ahora (a diferencia de las fases anteriores):
+`supabase-js` se carga desde CDN y cada operación habla con el
+proyecto NexoPOS en la nube.
 
 ### Diseño visual — Fase 2
 
@@ -251,6 +380,10 @@ debe poder ejecutarse sin depender de HTML, CSS, DOM o LocalStorage.*
 pos-pro/
 ├── index.html                     ← Setup / Login / Panel con sidebar
 ├── server.js                      ← Servidor estático (npm start)
+├── supabase/
+│   ├── schema.sql                 Esquema completo (tablas, RLS, RPCs)
+│   └── functions/create-staff-user/  Edge Function (crear usuarios sin
+│                                      cerrar la sesión de quien los crea)
 ├── package.json
 ├── styles/
 │   ├── variables.css              Tokens (colores, tipografía, espaciado)
@@ -277,18 +410,28 @@ pos-pro/
 │   │   └── useCases/              productUseCases, categoryUseCases,
 │   │                              heldSaleUseCases, saleUseCases,
 │   │                              customerUseCases, cashUseCases,
-│   │                              movementUseCases, setupUseCases,
-│   │                              authUseCases, staffUserUseCases,
-│   │                              roleUseCases, businessUseCases
+│   │                              movementUseCases, staffUserUseCases,
+│   │                              roleUseCases, businessUseCases,
+│   │                              supabaseAuthUseCases (ACTIVO),
+│   │                              supabaseSetupUseCases (ACTIVO),
+│   │                              authUseCases/setupUseCases (Local-
+│   │                              Storage, sin usar, de referencia)
 │   │
 │   ├── infrastructure/
-│   │   ├── storage/                StorageAdapter (único punto que toca
-│   │   │                           localStorage), SessionStore (sesión activa)
-│   │   ├── repositories/           Local Storage*Repository para
-│   │   │                           Product, Category, HeldSale, Sale,
-│   │   │                           Customer, Cash, Movement, Business,
-│   │   │                           Branch, Role, StaffUser
-│   │   └── mock/                   seedDemoData (solo primer uso)
+│   │   ├── supabaseClient.js       Cliente único (CDN esm.sh)
+│   │   ├── supabaseConfig.js       URL + anon key del proyecto
+│   │   ├── supabaseSession.js      Resuelve empresa_id del usuario actual
+│   │   ├── storage/                StorageAdapter + SessionStore — SIN USAR
+│   │   │                           hoy (main.js usa Supabase), quedan de
+│   │   │                           referencia/fallback offline futuro
+│   │   ├── repositories/           Supabase*Repository (ACTIVOS, en uso) +
+│   │   │                           LocalStorage*Repository (sin usar, de
+│   │   │                           referencia) para Product, Category,
+│   │   │                           HeldSale, Sale, Customer, Cash, Movement,
+│   │   │                           Business, Branch, Role, StaffUser
+│   │   └── mock/                   seedDemoData (solo LocalStorage, no se
+│   │                              usa con Supabase — cada empresa nueva
+│   │                              empieza vacía)
 │   │
 │   ├── presentation/
 │   │   ├── state/                  cartStore (carrito + cliente asignado)
