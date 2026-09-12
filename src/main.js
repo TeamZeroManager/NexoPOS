@@ -1,16 +1,15 @@
-import { StorageAdapter } from './infrastructure/storage/StorageAdapter.js';
-import { SessionStore } from './infrastructure/storage/SessionStore.js';
-import { LocalStorageProductRepository } from './infrastructure/repositories/LocalStorageProductRepository.js';
-import { LocalStorageCategoryRepository } from './infrastructure/repositories/LocalStorageCategoryRepository.js';
-import { LocalStorageHeldSaleRepository } from './infrastructure/repositories/LocalStorageHeldSaleRepository.js';
-import { LocalStorageSaleRepository } from './infrastructure/repositories/LocalStorageSaleRepository.js';
-import { LocalStorageCustomerRepository } from './infrastructure/repositories/LocalStorageCustomerRepository.js';
-import { LocalStorageCashRepository } from './infrastructure/repositories/LocalStorageCashRepository.js';
-import { LocalStorageMovementRepository } from './infrastructure/repositories/LocalStorageMovementRepository.js';
-import { LocalStorageBusinessRepository } from './infrastructure/repositories/LocalStorageBusinessRepository.js';
-import { LocalStorageBranchRepository } from './infrastructure/repositories/LocalStorageBranchRepository.js';
-import { LocalStorageRoleRepository } from './infrastructure/repositories/LocalStorageRoleRepository.js';
-import { LocalStorageStaffUserRepository } from './infrastructure/repositories/LocalStorageStaffUserRepository.js';
+import { supabase } from './infrastructure/supabaseClient.js';
+import { SupabaseProductRepository } from './infrastructure/repositories/SupabaseProductRepository.js';
+import { SupabaseCategoryRepository } from './infrastructure/repositories/SupabaseCategoryRepository.js';
+import { SupabaseHeldSaleRepository } from './infrastructure/repositories/SupabaseHeldSaleRepository.js';
+import { SupabaseSaleRepository } from './infrastructure/repositories/SupabaseSaleRepository.js';
+import { SupabaseCustomerRepository } from './infrastructure/repositories/SupabaseCustomerRepository.js';
+import { SupabaseCashRepository } from './infrastructure/repositories/SupabaseCashRepository.js';
+import { SupabaseMovementRepository } from './infrastructure/repositories/SupabaseMovementRepository.js';
+import { SupabaseBusinessRepository } from './infrastructure/repositories/SupabaseBusinessRepository.js';
+import { SupabaseBranchRepository } from './infrastructure/repositories/SupabaseBranchRepository.js';
+import { SupabaseRoleRepository } from './infrastructure/repositories/SupabaseRoleRepository.js';
+import { SupabaseStaffUserRepository } from './infrastructure/repositories/SupabaseStaffUserRepository.js';
 
 import { makeProductUseCases } from './application/useCases/productUseCases.js';
 import { makeCategoryUseCases } from './application/useCases/categoryUseCases.js';
@@ -19,13 +18,12 @@ import { makeSaleUseCases } from './application/useCases/saleUseCases.js';
 import { makeCustomerUseCases } from './application/useCases/customerUseCases.js';
 import { makeCashUseCases } from './application/useCases/cashUseCases.js';
 import { makeMovementUseCases } from './application/useCases/movementUseCases.js';
-import { makeSetupUseCases } from './application/useCases/setupUseCases.js';
-import { makeAuthUseCases } from './application/useCases/authUseCases.js';
+import { makeSupabaseSetupUseCases } from './application/useCases/supabaseSetupUseCases.js';
+import { makeSupabaseAuthUseCases } from './application/useCases/supabaseAuthUseCases.js';
 import { makeStaffUserUseCases } from './application/useCases/staffUserUseCases.js';
 import { makeRoleUseCases } from './application/useCases/roleUseCases.js';
 import { makeBusinessUseCases } from './application/useCases/businessUseCases.js';
 
-import { seedDemoData } from './infrastructure/mock/seedDemoData.js';
 import { createCartStore } from './presentation/state/cartStore.js';
 import { initPosScreen } from './presentation/screens/posScreen.js';
 import { initCartPanel } from './presentation/screens/cartPanel.js';
@@ -45,24 +43,27 @@ import { makeRolesScreen } from './presentation/screens/rolesScreen.js';
  * ---------------------------------------------------------
  * Responsabilidad:
  *   ÚNICO lugar del proyecto donde se decide qué implementación
- *   concreta de infraestructura se usa (hoy: LocalStorage), y el
- *   único que orquesta el flujo Setup → Login → Panel. Ningún
- *   caso de uso ni regla de dominio conoce estos detalles.
+ *   concreta de infraestructura se usa. Migrado de LocalStorage a
+ *   Supabase/PostgreSQL (persistencia central + multi-dispositivo) —
+ *   ningún caso de uso ni regla de dominio tuvo que cambiar para
+ *   este swap, tal como estaba diseñada la arquitectura.
+ *
+ *   Las implementaciones LocalStorage* siguen existiendo en el
+ *   proyecto (infrastructure/repositories) por si se necesitan de
+ *   referencia o modo offline en el futuro — simplemente ya no se
+ *   instancian aquí.
  */
-const storage = new StorageAdapter();
-const sessionStore = new SessionStore(storage);
-
-const productRepository = new LocalStorageProductRepository(storage);
-const categoryRepository = new LocalStorageCategoryRepository(storage);
-const heldSaleRepository = new LocalStorageHeldSaleRepository(storage);
-const saleRepository = new LocalStorageSaleRepository(storage);
-const customerRepository = new LocalStorageCustomerRepository(storage);
-const cashRepository = new LocalStorageCashRepository(storage);
-const movementRepository = new LocalStorageMovementRepository(storage);
-const businessRepository = new LocalStorageBusinessRepository(storage);
-const branchRepository = new LocalStorageBranchRepository(storage);
-const roleRepository = new LocalStorageRoleRepository(storage);
-const staffUserRepository = new LocalStorageStaffUserRepository(storage);
+const productRepository = new SupabaseProductRepository();
+const categoryRepository = new SupabaseCategoryRepository();
+const heldSaleRepository = new SupabaseHeldSaleRepository();
+const saleRepository = new SupabaseSaleRepository();
+const customerRepository = new SupabaseCustomerRepository();
+const cashRepository = new SupabaseCashRepository();
+const movementRepository = new SupabaseMovementRepository();
+const businessRepository = new SupabaseBusinessRepository();
+const branchRepository = new SupabaseBranchRepository();
+const roleRepository = new SupabaseRoleRepository();
+const staffUserRepository = new SupabaseStaffUserRepository();
 
 const productUseCases = makeProductUseCases({ productRepository });
 const categoryUseCases = makeCategoryUseCases({ productRepository, categoryRepository });
@@ -71,13 +72,14 @@ const saleUseCases = makeSaleUseCases({ productRepository, saleRepository, custo
 const customerUseCases = makeCustomerUseCases({ customerRepository, saleRepository, movementRepository });
 const cashUseCases = makeCashUseCases({ cashRepository, movementRepository });
 const movementUseCases = makeMovementUseCases({ movementRepository });
-const setupUseCases = makeSetupUseCases({ businessRepository, branchRepository, roleRepository, staffUserRepository });
-const authUseCases = makeAuthUseCases({ staffUserRepository, roleRepository, sessionStore });
+const setupUseCases = makeSupabaseSetupUseCases({ staffUserRepository, roleRepository });
+const authUseCases = makeSupabaseAuthUseCases({ staffUserRepository, roleRepository });
 const staffUserUseCases = makeStaffUserUseCases({ staffUserRepository, roleRepository });
 const roleUseCases = makeRoleUseCases({ roleRepository });
 const businessUseCases = makeBusinessUseCases({ businessRepository });
 
 const cartStore = createCartStore();
+let panelStarted = false;
 
 function showView(viewId) {
   ['viewSetup', 'viewLogin', 'viewPanel'].forEach((id) => {
@@ -92,21 +94,30 @@ async function showPanel(session) {
   const posBrandName = document.getElementById('posBrandName');
   if (posBrandName) posBrandName.textContent = business?.name ?? 'Negocio';
 
-  await seedDemoData({ productUseCases, categoryUseCases });
+  // El panel (listeners de POS, carrito, sidebar) solo se inicializa UNA
+  // vez por carga de página — si el usuario cierra sesión y vuelve a
+  // entrar sin recargar, solo se reconstruye el sidebar (RBAC puede
+  // cambiar entre un usuario y otro).
+  if (!panelStarted) {
+    panelStarted = true;
 
-  const posScreen = initPosScreen({ productUseCases, categoryUseCases, cartStore });
-  const topbarActions = initTopbarActions({ cashUseCases, movementUseCases });
-  initCartPanel({
-    cartStore,
-    heldSaleUseCases,
-    saleUseCases,
-    customerUseCases,
-    onSaleCompleted: () => {
-      posScreen.refreshProductGrid();
-      topbarActions.refreshCashBadge();
-    },
-  });
+    const posScreen = initPosScreen({ productUseCases, categoryUseCases, cartStore });
+    const topbarActions = initTopbarActions({ cashUseCases, movementUseCases });
+    initCartPanel({
+      cartStore,
+      heldSaleUseCases,
+      saleUseCases,
+      customerUseCases,
+      onSaleCompleted: () => {
+        posScreen.refreshProductGrid();
+        topbarActions.refreshCashBadge();
+      },
+    });
 
+    window.__posProTopbarActions = topbarActions;
+  }
+
+  const topbarActions = window.__posProTopbarActions;
   const screens = {
     resumen: makeDashboardScreen({ businessUseCases, saleUseCases, cashUseCases, customerUseCases, productUseCases, branchRepository }),
     ventas: makeSalesHistoryScreen({ saleUseCases }),
@@ -119,8 +130,8 @@ async function showPanel(session) {
   initAppShell({
     session,
     screens,
-    onLogout: () => {
-      authUseCases.logout();
+    onLogout: async () => {
+      await authUseCases.logout();
       cartStore.clear();
       showView('viewLogin');
     },
@@ -129,20 +140,30 @@ async function showPanel(session) {
 
 async function bootstrap() {
   initLoginScreen({ authUseCases, onLoggedIn: showPanel });
+  initSetupScreen({ setupUseCases, authUseCases, onComplete: showPanel });
 
-  const setupComplete = await setupUseCases.isSetupComplete();
-  if (!setupComplete) {
-    initSetupScreen({ setupUseCases, authUseCases, onComplete: showPanel });
-    showView('viewSetup');
-    return;
-  }
+  document.getElementById('btnGoToSetup').addEventListener('click', () => showView('viewSetup'));
+  document.getElementById('btnGoToLogin').addEventListener('click', () => showView('viewLogin'));
 
+  // A diferencia de LocalStorage, aquí NO existe un "único negocio" que
+  // determine si mostrar el setup — el backend es compartido y puede
+  // tener muchas empresas (multi-tenant real). Por eso el punto de
+  // entrada por defecto es el LOGIN; "Crea tu cuenta" lleva al asistente
+  // de configuración inicial para quien todavía no tiene negocio.
   const session = await authUseCases.getCurrentSession();
   if (session) {
     showPanel(session);
   } else {
     showView('viewLogin');
   }
+
+  // Si la sesión expira o se cierra desde otra pestaña, refleja el cambio.
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') {
+      panelStarted = false;
+      showView('viewLogin');
+    }
+  });
 }
 
 bootstrap();
