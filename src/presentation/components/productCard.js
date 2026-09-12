@@ -3,23 +3,21 @@ import { formatCurrency } from '../../shared/utils/format.js';
 /**
  * renderProductCard
  * ---------------------------------------------------------
- * Tarjeta de producto. La tarjeta mantiene la acción principal
- * de agregar al carrito y expone una acción secundaria para
- * eliminar (baja lógica) el producto.
+ * Responsabilidad: construir el DOM de una tarjeta de producto
+ * (sección 18). No decide qué pasa al hacer clic; recibe onSelect
+ * como callback desde la pantalla que la usa.
  */
-export function renderProductCard(product, { onSelect, onDelete } = {}) {
-  const card = document.createElement('article');
+export function renderProductCard(product, { onSelect } = {}) {
+  const card = document.createElement('button');
   card.className = 'product-card';
+  card.type = 'button';
 
   const lowStock = product.stock > 0 && product.stock <= 5;
   const outOfStock = product.stock <= 0;
 
   card.innerHTML = `
-    <div class="product-card__image-wrap">
-      <div class="product-card__image">
-        ${product.image ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">` : 'Sin imagen'}
-      </div>
-      <button type="button" class="product-card__delete" title="Eliminar producto" aria-label="Eliminar ${escapeHtml(product.name)}">×</button>
+    <div class="product-card__image">
+      ${product.image ? `<img src="${escapeHtml(product.image)}" alt="">` : 'Sin imagen'}
     </div>
     <div class="product-card__body">
       <span class="product-card__name">${escapeHtml(product.name)}</span>
@@ -29,16 +27,10 @@ export function renderProductCard(product, { onSelect, onDelete } = {}) {
           ${outOfStock ? 'Sin stock' : `${product.stock} und`}
         </span>
       </div>
-      <button type="button" class="btn btn--secondary product-card__add">Agregar</button>
     </div>
   `;
 
-  card.querySelector('.product-card__add').addEventListener('click', () => onSelect?.(product));
-  card.querySelector('.product-card__delete').addEventListener('click', (event) => {
-    event.stopPropagation();
-    onDelete?.(product);
-  });
-
+  card.addEventListener('click', () => onSelect?.(product));
   return card;
 }
 

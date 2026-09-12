@@ -2,9 +2,16 @@ import { openModal, closeAllModals } from './modal.js';
 import { showToast } from './toast.js';
 
 /**
- * Formulario de creación de productos.
- * La imagen puede seleccionarse desde el dispositivo; se comprime
- * antes de guardarla para evitar llenar localStorage rápidamente.
+ * openProductFormModal
+ * ---------------------------------------------------------
+ * Responsabilidad: recolectar los campos del formulario (sección 19)
+ * y delegar la creación al caso de uso. Este archivo NO valida
+ * reglas de negocio (precio >= 0, nombre requerido, etc.) — eso
+ * ya lo hace `createProduct()` en el dominio. Aquí solo se atrapa
+ * el ValidationError para mostrarlo con Toast en vez de alert().
+ *
+ * Dependencias:
+ *   productUseCases.createProduct, categoryUseCases (listar/crear)
  */
 export function openProductFormModal({ productUseCases, categoryUseCases, categories, onSaved }) {
   const form = document.createElement('form');
@@ -50,24 +57,13 @@ export function openProductFormModal({ productUseCases, categoryUseCases, catego
       <input class="search-input" name="sku" placeholder="Ej: BEB-001">
     </label>
 
-    <label class="product-image-upload">
-      <span style="font-size:0.875rem;">Foto del producto (opcional)</span>
-      <input name="imageFile" type="file" accept="image/*" class="product-image-upload__input">
-      <span class="product-image-upload__hint">Selecciona una foto desde el PC o celular. Se optimizará automáticamente.</span>
-      <img class="product-image-upload__preview" alt="Vista previa" hidden>
-    </label>
-
     <label style="display:flex;flex-direction:column;gap:4px;font-size:0.875rem;">
-      O usar URL de imagen (opcional)
+      Imagen (URL opcional)
       <input class="search-input" name="image" placeholder="https://...">
     </label>
   `;
 
   const categorySelect = form.querySelector('select[name="categoryId"]');
-  const imageInput = form.querySelector('input[name="imageFile"]');
-  const imageUrlInput = form.querySelector('input[name="image"]');
-  const preview = form.querySelector('.product-image-upload__preview');
-  let selectedImage = null;
 
   form.querySelector('#btnAddCategoryInline').addEventListener('click', async () => {
     const input = form.querySelector('input[name="newCategoryName"]');
@@ -84,42 +80,6 @@ export function openProductFormModal({ productUseCases, categoryUseCases, catego
       showToast(`Categoría "${category.name}" creada`, 'success');
     } catch (error) {
       showToast(error.message, 'danger');
-    }
-  });
-
-  imageInput.addEventListener('change', async () => {
-    const file = imageInput.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      imageInput.value = '';
-      showToast('Selecciona un archivo de imagen válido', 'danger');
-      return;
-    }
-    if (file.size > 8 * 1024 * 1024) {
-      imageInput.value = '';
-      showToast('La imagen debe pesar máximo 8 MB', 'danger');
-      return;
-    }
-
-    try {
-      selectedImage = await optimizeImage(file);
-      preview.src = selectedImage;
-      preview.hidden = false;
-      imageUrlInput.value = '';
-      showToast('Foto cargada', 'success');
-    } catch (error) {
-      selectedImage = null;
-      imageInput.value = '';
-      preview.hidden = true;
-      showToast(error.message || 'No se pudo procesar la imagen', 'danger');
-    }
-  });
-
-  imageUrlInput.addEventListener('input', () => {
-    if (imageUrlInput.value.trim()) {
-      selectedImage = null;
-      imageInput.value = '';
-      preview.hidden = true;
     }
   });
 
@@ -142,7 +102,7 @@ export function openProductFormModal({ productUseCases, categoryUseCases, catego
               stock: Number(data.get('stock')),
               categoryId: data.get('categoryId'),
               sku: data.get('sku')?.trim() || null,
-              image: selectedImage || data.get('image')?.trim() || null,
+              image: data.get('image')?.trim() || null,
             });
             closeAllModals();
             showToast('Producto creado', 'success');
@@ -153,30 +113,6 @@ export function openProductFormModal({ productUseCases, categoryUseCases, catego
         },
       },
     ],
-  });
-}
-
-function optimizeImage(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
-    reader.onload = () => {
-      const image = new Image();
-      image.onerror = () => reject(new Error('No se pudo procesar la imagen'));
-      image.onload = () => {
-        const maxSize = 800;
-        const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
-        const width = Math.max(1, Math.round(image.width * scale));
-        const height = Math.max(1, Math.round(image.height * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext('2d').drawImage(image, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.82));
-      };
-      image.src = reader.result;
-    };
-    reader.readAsDataURL(file);
   });
 }
 
