@@ -7,10 +7,13 @@
  */
 export function renderPlaceholder(title, description) {
   const container = document.getElementById('pagePlaceholder');
-  container.innerHTML = `
-    <div class="empty-state" style="background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); min-height:300px;">
-      <strong>${title}</strong>
-      <span>${description}</span>
-    </div>
-  `;
+  const box = document.createElement('div');
+  box.className = 'empty-state';
+  box.style.cssText = 'background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); min-height:300px;';
+  const strong = document.createElement('strong');
+  strong.textContent = title;
+  const span = document.createElement('span');
+  span.textContent = description;
+  box.append(strong, span);
+  container.replaceChildren(box);
 }

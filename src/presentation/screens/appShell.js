@@ -14,27 +14,20 @@ const NAV_ITEMS = [
   { id: 'pos', label: 'Punto de Venta', permission: PERMISSIONS.REGISTER_SALES },
   { id: 'ventas', label: 'Ventas', permission: PERMISSIONS.VIEW_REPORTS },
   { id: 'clientes', label: 'Clientes', permission: null },
-  { id: 'reportes', label: 'Reportes', permission: PERMISSIONS.VIEW_REPORTS, placeholder: true },
-  { id: 'catalogo', label: 'Catálogo', permission: PERMISSIONS.MANAGE_PRODUCTS, placeholder: true },
-  { id: 'inventario', label: 'Inventario', permission: PERMISSIONS.MANAGE_INVENTORY, placeholder: true },
-  { id: 'compras', label: 'Compras', permission: PERMISSIONS.MANAGE_PURCHASES, placeholder: true },
-  { id: 'proveedores', label: 'Proveedores', permission: PERMISSIONS.MANAGE_PURCHASES, placeholder: true },
+  { id: 'reportes', label: 'Reportes', permission: PERMISSIONS.VIEW_REPORTS },
+  { id: 'catalogo', label: 'Catálogo', permission: PERMISSIONS.MANAGE_PRODUCTS },
+  { id: 'inventario', label: 'Inventario', permission: PERMISSIONS.MANAGE_INVENTORY },
+  { id: 'compras', label: 'Compras', permission: PERMISSIONS.MANAGE_PURCHASES },
+  { id: 'proveedores', label: 'Proveedores', permission: PERMISSIONS.MANAGE_PURCHASES },
   { id: 'caja', label: 'Caja', permission: PERMISSIONS.OPEN_CLOSE_CASH },
+  { id: 'movimientos', label: 'Movimientos', permission: PERMISSIONS.VIEW_REPORTS },
   { id: 'usuarios', label: 'Usuarios', permission: PERMISSIONS.MANAGE_USERS },
   { id: 'roles', label: 'Roles y permisos', permission: PERMISSIONS.MANAGE_ROLES },
-  { id: 'auditoria', label: 'Auditoría', permission: PERMISSIONS.MANAGE_SETTINGS, placeholder: true },
-  { id: 'configuracion', label: 'Configuración', permission: PERMISSIONS.MANAGE_SETTINGS, placeholder: true },
+  { id: 'auditoria', label: 'Auditoría', permission: PERMISSIONS.MANAGE_SETTINGS },
+  { id: 'configuracion', label: 'Configuración', permission: PERMISSIONS.MANAGE_SETTINGS },
 ];
 
-const PLACEHOLDER_COPY = {
-  reportes: ['Reportes', 'Ventas diarias/mensuales, productos más vendidos y utilidad — próximamente.'],
-  catalogo: ['Catálogo', 'Vista completa del catálogo de productos — próximamente.'],
-  inventario: ['Inventario', 'Ajustes de inventario y trazabilidad — próximamente.'],
-  compras: ['Compras', 'Órdenes de compra a proveedores — próximamente.'],
-  proveedores: ['Proveedores', 'Gestión de proveedores — próximamente.'],
-  auditoria: ['Auditoría', 'Registro de quién hizo qué y cuándo (sección 38) — próximamente.'],
-  configuracion: ['Configuración', 'Personalización del negocio: logo, colores, datos fiscales — próximamente.'],
-};
+const PLACEHOLDER_COPY = {}; // Todos los módulos del menú ya están construidos.
 
 /**
  * initAppShell
@@ -78,7 +71,7 @@ export function initAppShell({ session, screens, onLogout }) {
       return;
     }
 
-    const pageElId = { resumen: 'pageResumen', pos: 'pagePOS', ventas: 'pageVentas', clientes: 'pageClientes', caja: 'pageCaja', usuarios: 'pageUsuarios', roles: 'pageRoles' }[pageId];
+    const pageElId = { resumen: 'pageResumen', pos: 'pagePOS', ventas: 'pageVentas', clientes: 'pageClientes', caja: 'pageCaja', movimientos: 'pageMovimientos', usuarios: 'pageUsuarios', roles: 'pageRoles', catalogo: 'pageCatalogo', inventario: 'pageInventario', proveedores: 'pageProveedores', compras: 'pageCompras', reportes: 'pageReportes', configuracion: 'pageConfiguracion', auditoria: 'pageAuditoria' }[pageId];
     if (pageElId) {
       document.getElementById(pageElId).style.display = pageId === 'pos' ? 'block' : 'block';
       screens[pageId]?.render?.();

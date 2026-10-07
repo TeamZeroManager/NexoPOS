@@ -1,6 +1,7 @@
 import { openModal, closeModal } from '../components/modal.js';
 import { showToast } from '../components/toast.js';
 import { formatCurrency, formatDate } from '../../shared/utils/format.js';
+import { escapeHtml } from '../../shared/utils/escape.js';
 
 /**
  * makeCustomersScreen
@@ -107,8 +108,3 @@ export function makeCustomersScreen({ customerUseCases }) {
   return { render };
 }
 
-function escapeHtml(value) {
-  const div = document.createElement('div');
-  div.textContent = value ?? '';
-  return div.innerHTML;
-}

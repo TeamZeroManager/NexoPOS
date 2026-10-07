@@ -1,5 +1,6 @@
 import { showToast } from '../components/toast.js';
 import { formatDate } from '../../shared/utils/format.js';
+import { escapeHtml } from '../../shared/utils/escape.js';
 
 /**
  * makeUsersScreen
@@ -102,8 +103,3 @@ export function makeUsersScreen({ staffUserUseCases, roleUseCases, currentUserId
   return { render };
 }
 
-function escapeHtml(value) {
-  const div = document.createElement('div');
-  div.textContent = value ?? '';
-  return div.innerHTML;
-}

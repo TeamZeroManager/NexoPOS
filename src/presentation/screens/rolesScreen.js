@@ -1,5 +1,6 @@
 import { showToast } from '../components/toast.js';
 import { PERMISSIONS, PERMISSION_LABELS } from '../../shared/constants/permissions.js';
+import { escapeHtml } from '../../shared/utils/escape.js';
 
 // Mismo orden de dos columnas que la referencia visual.
 const LEFT_COLUMN = [
@@ -95,8 +96,3 @@ export function makeRolesScreen({ roleUseCases }) {
   return { render };
 }
 
-function escapeHtml(value) {
-  const div = document.createElement('div');
-  div.textContent = value ?? '';
-  return div.innerHTML;
-}

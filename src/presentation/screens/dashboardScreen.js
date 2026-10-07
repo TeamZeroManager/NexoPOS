@@ -1,4 +1,5 @@
 import { formatCurrency } from '../../shared/utils/format.js';
+import { escapeHtml } from '../../shared/utils/escape.js';
 
 /**
  * renderDashboard
@@ -8,7 +9,7 @@ import { formatCurrency } from '../../shared/utils/format.js';
  * stock, cuentas por pagar) usando datos reales de los
  * repositorios — nada de datos de ejemplo ni mockeados.
  */
-export function makeDashboardScreen({ businessUseCases, saleUseCases, cashUseCases, customerUseCases, productUseCases, branchRepository }) {
+export function makeDashboardScreen({ businessUseCases, saleUseCases, cashUseCases, customerUseCases, productUseCases, movementUseCases, branchRepository }) {
   const container = document.getElementById('pageResumen');
 
   function isToday(isoDate) {
@@ -24,13 +25,14 @@ export function makeDashboardScreen({ businessUseCases, saleUseCases, cashUseCas
   }
 
   async function render() {
-    const [business, branches, sales, cashStatus, customers, products] = await Promise.all([
+    const [business, branches, sales, cashStatus, customers, products, comparison] = await Promise.all([
       businessUseCases.getCurrent(),
       branchRepository.findAll(),
       saleUseCases.listAllSales(),
       cashUseCases.getCashStatus(),
       customerUseCases.listCustomers(),
       productUseCases.listProducts(),
+      movementUseCases.getMonthOverMonthComparison(),
     ]);
 
     const salesToday = sales.filter((s) => isToday(s.createdAt));
@@ -83,6 +85,22 @@ export function makeDashboardScreen({ businessUseCases, saleUseCases, cashUseCas
     });
     container.appendChild(grid);
 
+    const comparisonSection = document.createElement('div');
+    comparisonSection.className = 'card-section';
+    comparisonSection.innerHTML = `<strong style="display:block;margin-bottom:12px;">Ingresos y egresos vs. mes anterior</strong>`;
+    const compGrid = document.createElement('div');
+    compGrid.style.display = 'grid';
+    compGrid.style.gridTemplateColumns = '1fr 1fr';
+    compGrid.style.gap = '12px';
+    compGrid.appendChild(
+      renderComparisonCard('Ingresos este mes', comparison.current.income, comparison.incomeChangePct, 'up')
+    );
+    compGrid.appendChild(
+      renderComparisonCard('Egresos este mes', comparison.current.expense, comparison.expenseChangePct, 'down')
+    );
+    comparisonSection.appendChild(compGrid);
+    container.appendChild(comparisonSection);
+
     const structureSection = document.createElement('div');
     structureSection.className = 'card-section';
     structureSection.innerHTML = `<strong style="display:block;margin-bottom:8px;">${escapeHtml(business?.name ?? 'Negocio')} — Estructura</strong>`;
@@ -103,8 +121,38 @@ export function makeDashboardScreen({ businessUseCases, saleUseCases, cashUseCas
   return { render };
 }
 
-function escapeHtml(value) {
-  const div = document.createElement('div');
-  div.textContent = value ?? '';
-  return div.innerHTML;
+
+/**
+ * renderComparisonCard
+ * ---------------------------------------------------------
+ * goodDirection: 'up' significa que subir es bueno (ingresos);
+ * 'down' significa que bajar es bueno (egresos). El color y la
+ * flecha reflejan si el cambio del mes fue favorable o no —
+ * nunca solo "verde = subió", porque para egresos subir es malo.
+ */
+function renderComparisonCard(label, currentValue, changePct, goodDirection) {
+  let arrow = '→';
+  let color = 'var(--color-ink-muted)';
+  let detail = 'Sin datos del mes anterior para comparar';
+
+  if (changePct !== null) {
+    if (changePct > 0) arrow = '▲';
+    else if (changePct < 0) arrow = '▼';
+
+    const isFavorable =
+      changePct === 0 ? null : goodDirection === 'up' ? changePct > 0 : changePct < 0;
+    color = isFavorable === null ? 'var(--color-ink-muted)' : isFavorable ? 'var(--color-success)' : 'var(--color-danger)';
+    detail = `${arrow} ${Math.abs(changePct).toFixed(1)}% vs. mes anterior`;
+  }
+
+  const card = document.createElement('div');
+  card.style.padding = '12px';
+  card.style.border = '1px solid var(--color-border)';
+  card.style.borderRadius = 'var(--radius-md)';
+  card.innerHTML = `
+    <div style="font-size:0.8125rem; color:var(--color-ink-muted); margin-bottom:4px;">${label}</div>
+    <div style="font-family:var(--font-money); font-size:1.375rem; font-weight:600;">${formatCurrency(currentValue)}</div>
+    <div style="font-size:0.8125rem; color:${color}; margin-top:4px; font-weight:600;">${detail}</div>
+  `;
+  return card;
 }
