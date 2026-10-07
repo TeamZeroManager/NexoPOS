@@ -1,6 +1,7 @@
 import { openModal, closeAllModals } from './modal.js';
 import { showToast } from './toast.js';
 import { formatCurrency } from '../../shared/utils/format.js';
+import { escapeHtml } from '../../shared/utils/escape.js';
 
 /**
  * openCustomerPickerModal
@@ -93,8 +94,3 @@ export async function openCustomerPickerModal({ customerUseCases, cartStore }) {
   });
 }
 
-function escapeHtml(value) {
-  const div = document.createElement('div');
-  div.textContent = value ?? '';
-  return div.innerHTML;
-}

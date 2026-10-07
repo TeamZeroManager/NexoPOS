@@ -3,6 +3,7 @@ import { confirmDialog } from './confirmDialog.js';
 import { showToast } from './toast.js';
 import { formatCurrency, formatDate } from '../../shared/utils/format.js';
 import { calculateSaleSubtotal, calculateSaleDiscount, calculateSaleTotal } from '../../domain/calculations/saleCalculations.js';
+import { escapeHtml } from '../../shared/utils/escape.js';
 
 /**
  * openHeldSalesModal
@@ -120,8 +121,3 @@ export async function openHeldSalesModal({ heldSaleUseCases, cartStore, onChange
   });
 }
 
-function escapeHtml(value) {
-  const div = document.createElement('div');
-  div.textContent = value ?? '';
-  return div.innerHTML;
-}

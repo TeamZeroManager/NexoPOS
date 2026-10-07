@@ -1,4 +1,5 @@
 import { formatCurrency } from '../../shared/utils/format.js';
+import { escapeHtml, safeImageUrl } from '../../shared/utils/escape.js';
 
 /**
  * renderProductCard
@@ -17,7 +18,7 @@ export function renderProductCard(product, { onSelect } = {}) {
 
   card.innerHTML = `
     <div class="product-card__image">
-      ${product.image ? `<img src="${escapeHtml(product.image)}" alt="">` : 'Sin imagen'}
+      ${safeImageUrl(product.image) ? `<img src="${escapeHtml(safeImageUrl(product.image))}" alt="">` : 'Sin imagen'}
     </div>
     <div class="product-card__body">
       <span class="product-card__name">${escapeHtml(product.name)}</span>
@@ -34,8 +35,3 @@ export function renderProductCard(product, { onSelect } = {}) {
   return card;
 }
 
-function escapeHtml(value) {
-  const div = document.createElement('div');
-  div.textContent = value ?? '';
-  return div.innerHTML;
-}

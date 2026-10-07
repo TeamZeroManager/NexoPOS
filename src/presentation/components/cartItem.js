@@ -1,5 +1,6 @@
 import { formatCurrency } from '../../shared/utils/format.js';
 import { calculateItemSubtotal, calculateItemDiscount } from '../../domain/calculations/saleCalculations.js';
+import { escapeHtml } from '../../shared/utils/escape.js';
 
 /**
  * renderCartItem
@@ -42,8 +43,3 @@ export function renderCartItem(item, { onIncrement, onDecrement, onDiscount, onR
   return el;
 }
 
-function escapeHtml(value) {
-  const div = document.createElement('div');
-  div.textContent = value ?? '';
-  return div.innerHTML;
-}

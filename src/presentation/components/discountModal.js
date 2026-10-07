@@ -1,5 +1,6 @@
 import { openModal, closeModal, closeAllModals } from './modal.js';
 import { showToast } from './toast.js';
+import { escapeHtml } from '../../shared/utils/escape.js';
 
 /**
  * openDiscountModal
@@ -41,8 +42,3 @@ export function openDiscountModal({ item, onApply }) {
   });
 }
 
-function escapeHtml(value) {
-  const div = document.createElement('div');
-  div.textContent = value ?? '';
-  return div.innerHTML;
-}

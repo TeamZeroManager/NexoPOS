@@ -2,6 +2,7 @@ import { openModal, closeModal, closeAllModals } from './modal.js';
 import { confirmDialog } from './confirmDialog.js';
 import { showToast } from './toast.js';
 import { formatCurrency, formatDate } from '../../shared/utils/format.js';
+import { escapeHtml } from '../../shared/utils/escape.js';
 
 /**
  * openFiadosModal
@@ -170,8 +171,3 @@ export async function openFiadosModal({ customerUseCases }) {
   });
 }
 
-function escapeHtml(value) {
-  const div = document.createElement('div');
-  div.textContent = value ?? '';
-  return div.innerHTML;
-}

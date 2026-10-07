@@ -19,7 +19,7 @@
  */
 const modalStack = []; // { id, overlay }
 
-export function openModal({ id = null, title, bodyNode, actions = [] }) {
+export function openModal({ id = null, title, bodyNode, actions = [], maxWidth = null }) {
   if (id && modalStack.some((entry) => entry.id === id)) {
     return; // ya hay uno de estos abierto — no duplicar
   }
@@ -29,6 +29,7 @@ export function openModal({ id = null, title, bodyNode, actions = [] }) {
 
   const modal = document.createElement('div');
   modal.className = 'modal';
+  if (maxWidth) modal.style.maxWidth = maxWidth;
 
   const titleEl = document.createElement('h2');
   titleEl.className = 'modal__title';
