@@ -269,6 +269,19 @@ revoke all on
   ventas, detalle_ventas, ventas_en_espera
 from anon;
 
+-- service_role se salta RLS, pero TODAVÍA necesita el GRANT de tabla
+-- base — no se le da automáticamente por crear las tablas con SQL
+-- directo (a diferencia del editor visual de Supabase). Sin esto, la
+-- Edge Function create-staff-user falla con "permission denied for
+-- table roles" (bug real encontrado en producción — ver README).
+grant usage on schema public to service_role;
+grant select, insert, update, delete on
+  empresas, sucursales, roles, usuarios,
+  categorias, productos, clientes,
+  cajas, movimientos_caja, movimientos_inventario,
+  ventas, detalle_ventas, ventas_en_espera
+to service_role;
+
 revoke execute on function current_empresa_id() from anon, public;
 revoke execute on function has_permission(text) from anon, public;
 grant execute on function current_empresa_id() to authenticated;
