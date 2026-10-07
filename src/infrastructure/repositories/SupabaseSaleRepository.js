@@ -30,6 +30,8 @@ export class SupabaseSaleRepository extends SaleRepository {
       change: row.cambio,
       status: row.estado,
       createdAt: row.created_at,
+      cancelledAt: row.anulada_en ?? null,
+      cancelReason: row.motivo_anulacion ?? null,
       items: (row.detalle_ventas ?? []).map((d) => ({
         productId: d.producto_id,
         name: d.nombre,
@@ -66,31 +68,21 @@ export class SupabaseSaleRepository extends SaleRepository {
   }
 
   /** Cumple la interfaz por compatibilidad; el flujo real usa las transactional() de abajo. */
-  async save(sale) {
-    const empresaId = await getEmpresaId();
-    const { data, error } = await supabase
-      .from('ventas')
-      .insert({
-        id: sale.id,
-        empresa_id: empresaId,
-        cliente_id: sale.customerId,
-        metodo_pago: sale.paymentMethod,
-        subtotal: sale.subtotal,
-        descuento: sale.discount,
-        total: sale.total,
-        recibido: sale.received,
-        cambio: sale.change,
-        estado: sale.status,
-      })
-      .select()
-      .single();
-    if (error) throw error;
-    return this.toDomain(data);
+  /** Las ventas ya no se insertan ni se modifican directo: solo mediante las RPC transaccionales. */
+  async save() {
+    throw new Error('Las ventas se registran únicamente con las operaciones transaccionales del servidor');
   }
 
-  async updateStatus(id, status) {
-    const { data, error } = await supabase.from('ventas').update({ estado: status }).eq('id', id).select().maybeSingle();
-    if (error) throw error;
+  async updateStatus() {
+    throw new Error('El estado de una venta solo cambia con la anulación transaccional');
+  }
+
+  /** Anulación atómica: repone stock, revierte caja o deuda y deja motivo, usuario y fecha. */
+  async cancelTransactional(saleId, reason) {
+    const { data, error } = await supabase.rpc('anular_venta', {
+      p_empresa_id: await getEmpresaId(), p_venta_id: saleId, p_motivo: reason,
+    });
+    if (error) throw new Error(error.message);
     return this.toDomain(data);
   }
 

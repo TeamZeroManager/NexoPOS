@@ -21,6 +21,8 @@ export class SupabaseProductRepository extends ProductRepository {
       sku: row.sku,
       image: row.imagen,
       active: row.activo,
+      minStock: row.stock_minimo ?? 5,
+      cost: row.costo ?? 0,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -79,11 +81,9 @@ export class SupabaseProductRepository extends ProductRepository {
     if ('name' in changes) patch.nombre = changes.name;
     if ('price' in changes) patch.precio = changes.price;
     if ('categoryId' in changes) patch.categoria_id = changes.categoryId;
-    if ('stock' in changes) patch.stock = changes.stock;
     if ('sku' in changes) patch.sku = changes.sku;
     if ('image' in changes) patch.imagen = changes.image;
     if ('active' in changes) patch.activo = changes.active;
-    patch.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase.from('productos').update(patch).eq('id', id).select().maybeSingle();
     if (error) throw error;

@@ -40,26 +40,53 @@ export class SupabaseCustomerRepository extends CustomerRepository {
         telefono: customer.phone,
         email: customer.email,
         cupo_credito: customer.creditLimit,
-        deuda_actual: customer.currentDebt,
         activo: customer.active,
       })
       .select()
       .single();
-    if (error) throw error;
+    if (error) throw this.friendly(error, customer.creditLimit > 0);
     return this.toDomain(data);
   }
 
+  /** 42501 = la política RLS rechazó la escritura (falta permiso). */
+  friendly(error, withCredit = false) {
+    if (error?.code !== '42501') return error;
+    return new Error(withCredit
+      ? 'Solo un administrador puede asignar un cupo de crédito. Crea el cliente sin cupo y pide que se lo asignen.'
+      : 'No tienes permiso para realizar esta acción');
+  }
+
+  /**
+   * Los datos de contacto se actualizan directo (RLS + columnas permitidas). El cupo de crédito y
+   * la deuda NO: el cupo pasa por una RPC que exige MANAGE_SETTINGS y la deuda solo la mueven
+   * las ventas fiadas y los abonos.
+   */
   async update(id, changes) {
     const patch = {};
     if ('name' in changes) patch.nombre = changes.name;
     if ('phone' in changes) patch.telefono = changes.phone;
     if ('email' in changes) patch.email = changes.email;
-    if ('creditLimit' in changes) patch.cupo_credito = changes.creditLimit;
-    if ('currentDebt' in changes) patch.deuda_actual = changes.currentDebt;
     if ('active' in changes) patch.activo = changes.active;
-    const { data, error } = await supabase.from('clientes').update(patch).eq('id', id).select().maybeSingle();
-    if (error) throw error;
-    return this.toDomain(data);
+
+    let row = null;
+    if (Object.keys(patch).length > 0) {
+      const { data, error } = await supabase.from('clientes').update(patch).eq('id', id).select().maybeSingle();
+      if (error) throw this.friendly(error);
+      row = data;
+    }
+    if ('creditLimit' in changes) {
+      const { data, error } = await supabase.rpc('actualizar_cupo_credito', {
+        p_empresa_id: await getEmpresaId(), p_cliente_id: id, p_cupo: changes.creditLimit,
+      });
+      if (error) throw new Error(error.message);
+      row = data;
+    }
+    if (!row) {
+      const { data, error } = await supabase.from('clientes').select('*').eq('id', id).maybeSingle();
+      if (error) throw error;
+      row = data;
+    }
+    return this.toDomain(row);
   }
 
   /** Abono atómico (actualiza deuda + registra el ingreso en caja) — sección 24. */

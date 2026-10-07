@@ -33,8 +33,15 @@ export class SupabaseCashRepository extends CashRepository {
       })
       .select()
       .single();
-    if (error) throw error;
+    if (error) throw this.friendly(error);
     return this.toDomain(data);
+  }
+
+  /** 23505 = índice único (una sola caja abierta); 42501 = RLS (falta OPEN_CLOSE_CASH). */
+  friendly(error) {
+    if (error?.code === '23505') return new Error('Ya hay una caja abierta');
+    if (error?.code === '42501') return new Error('No tienes permiso para abrir o cerrar la caja');
+    return error;
   }
 
   async update(id, changes) {
@@ -43,7 +50,7 @@ export class SupabaseCashRepository extends CashRepository {
     if ('closedAt' in changes) patch.cerrada_en = changes.closedAt;
     if ('cashBalance' in changes) patch.saldo_cierre = changes.cashBalance;
     const { data, error } = await supabase.from('cajas').update(patch).eq('id', id).select().maybeSingle();
-    if (error) throw error;
+    if (error) throw this.friendly(error);
     return this.toDomain(data);
   }
 }

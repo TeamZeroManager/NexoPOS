@@ -72,15 +72,29 @@ export class SupabaseStaffUserRepository extends StaffUserRepository {
     return this.toDomain(data);
   }
 
+  /**
+   * Cuando la función responde con un código no-2xx, supabase-js entrega `data = null` y deja la
+   * respuesta HTTP en `error.context`. Sin leerla, el usuario solo ve el genérico
+   * "Edge Function returned a non-2xx status code" y no sabe qué corregir.
+   */
+  async readFunctionError(error) {
+    const fallback = 'No se pudo crear el usuario';
+    try {
+      const body = await error.context?.json?.();
+      const detail = body?.error ?? body?.message; // {error} lo escribe la función; {message} el gateway (ej. JWT inválido)
+      if (detail) return /jwt/i.test(detail) ? 'Tu sesión expiró. Cierra sesión y vuelve a entrar.' : String(detail);
+    } catch {
+      // el cuerpo no era JSON: se usa el mensaje genérico de abajo
+    }
+    return error.message && !/non-2xx/i.test(error.message) ? error.message : fallback;
+  }
+
   /** Crea el usuario de Auth + su fila en "usuarios" sin afectar la sesión activa. */
   async createViaEdgeFunction({ nombre, username, password, rolId }) {
     const { data, error } = await supabase.functions.invoke('create-staff-user', {
       body: { nombre, username, password, rolId },
     });
-    if (error) {
-      const message = data?.error || error.message || 'No se pudo crear el usuario';
-      throw new Error(message);
-    }
+    if (error) throw new Error(await this.readFunctionError(error));
     if (data?.error) throw new Error(data.error);
     return data;
   }
