@@ -8,10 +8,20 @@ import { ValidationError } from '../../shared/errors/ValidationError.js';
  * datos ya resueltos (hash calculado, lista de usuarios existente).
  */
 
-/** Sección "Contraseña": mínimo 6 caracteres. */
+/** Contraseña: mínimo 8 caracteres. */
+export const MIN_PASSWORD_LENGTH = 8;
 export function assertPasswordStrength(password) {
-  if (!password || password.length < 6) {
-    throw new ValidationError('La contraseña debe tener mínimo 6 caracteres', 'password');
+  if (!password || password.length < MIN_PASSWORD_LENGTH) {
+    throw new ValidationError(`La contraseña debe tener mínimo ${MIN_PASSWORD_LENGTH} caracteres`, 'password');
+  }
+  return true;
+}
+
+/** Usuario: 3-30 caracteres [a-z0-9._-] (mismo patrón que el CHECK de la base y la Edge Function). */
+export const USERNAME_PATTERN = /^[a-z0-9._-]{3,30}$/;
+export function assertValidUsername(username) {
+  if (!USERNAME_PATTERN.test((username ?? '').toLowerCase().trim())) {
+    throw new ValidationError('El usuario debe tener 3-30 caracteres: letras, números, punto, guion o guion bajo', 'username');
   }
   return true;
 }
