@@ -36,8 +36,9 @@ test('assertPasswordStrength rechaza contraseñas cortas', () => {
   assert.throws(() => assertPasswordStrength('123'));
 });
 
-test('assertPasswordStrength acepta 6+ caracteres', () => {
-  assert.doesNotThrow(() => assertPasswordStrength('123456'));
+test('assertPasswordStrength acepta 8+ caracteres y rechaza 7', () => {
+  assert.doesNotThrow(() => assertPasswordStrength('12345678'));
+  assert.throws(() => assertPasswordStrength('1234567'), /8 caracteres/);
 });
 
 test('assertUniqueUsername rechaza username duplicado (sin importar mayúsculas)', () => {
