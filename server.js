@@ -33,13 +33,28 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
-  const urlPath = req.url === '/' ? '/index.html' : req.url.split('?')[0];
-  const filePath = path.join(ROOT, decodeURIComponent(urlPath));
+  const rawPath = req.url === '/' ? '/index.html' : req.url.split('?')[0];
+  let urlPath;
+  try {
+    urlPath = decodeURIComponent(rawPath); // un "%" mal formado lanzaba URIError y tumbaba el proceso
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('Solicitud inválida');
+  }
+  const filePath = path.join(ROOT, urlPath);
 
-  // Evita salir de la carpeta del proyecto.
-  if (!filePath.startsWith(ROOT)) {
+  // Evita salir de la carpeta (con separador final: "/pos-pro-x" ya no pasa por prefijo de "/pos-pro").
+  if (filePath !== ROOT && !filePath.startsWith(ROOT + path.sep)) {
     res.writeHead(403);
     return res.end('Prohibido');
+  }
+
+  // Solo se sirve lo que el navegador necesita: index.html, /src, /styles y /assets. Nunca README, SQL,
+  // tests, package.json ni carpetas ocultas.
+  const firstSegment = path.relative(ROOT, filePath).split(path.sep)[0];
+  if (!['index.html', 'src', 'styles', 'assets'].includes(firstSegment)) {
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('404 - No encontrado: ' + urlPath);
   }
 
   fs.readFile(filePath, (err, data) => {

@@ -107,7 +107,7 @@ navegador (mi entorno de pruebas no tiene salida de red hacia
 crear el negocio, cerrar sesión, iniciar sesión desde otra pestaña
 (simulando otro dispositivo), y confirmar que ves los mismos datos.
 
-### Bug encontrado ya en uso real (corregido)
+### Bug #1 encontrado en producción: RLS en setup_business (corregido)
 
 Al probarlo en tu navegador, `setup_business()` fallaba con
 `new row violates row-level security policy for table "empresas"` —
@@ -125,6 +125,73 @@ temporal — ya no hacía falta, porque crear un negocio o un usuario
 ahora solo puede pasar por las funciones `SECURITY DEFINER` (o la Edge
 Function, para usuarios adicionales). Verificado de nuevo en la base de
 datos real tras el fix: `setup_business()` completa correctamente.
+
+### Bug #2 encontrado en producción: CORS en la Edge Function (corregido)
+
+Al desplegar en Vercel (dominio distinto al de Supabase) y tratar de
+crear un cajero desde "Usuarios", apareció **"Failed to send a request
+to the Edge Function"**. Revisé los logs (`edge_logs`) y confirmé que
+la petición ni siquiera llegaba a Supabase — el navegador la bloqueaba
+antes de salir. Causa: la Edge Function `create-staff-user` no
+respondía al *preflight* `OPTIONS` ni incluía encabezados
+`Access-Control-Allow-*`, algo obligatorio cuando la app y la función
+viven en dominios distintos (tu caso: `vercel.app` llamando a
+`supabase.co`). Se agregaron los encabezados CORS y el manejo explícito
+de `OPTIONS`, y se redesplegó
+(`supabase/functions/create-staff-user/index.ts`).
+
+### Bug #3 encontrado en producción: `service_role` sin permisos de tabla (corregido)
+
+Después del fix de CORS, crear un cajero seguía fallando. Los logs
+mostraron el error real: `permission denied for table roles` —no era
+RLS esta vez, sino un permiso base que faltaba. Causa: `service_role`
+**se salta RLS, pero igual necesita el GRANT normal de tabla** — eso
+solo se le había dado a `authenticated`, nunca a `service_role`, porque
+las tablas se crearon con SQL directo (el editor visual de Supabase
+sí lo hace automático; una migración manual, no). Sin ese permiso, la
+Edge Function `create-staff-user` —que usa la `service_role` key a
+propósito, para no tocar la sesión del administrador— no podía ni
+leer ni escribir en `roles`/`usuarios`. Se agregó el `GRANT` faltante
+a las 13 tablas para `service_role` y se verificó directamente contra
+`information_schema.role_table_grants`.
+
+## Módulo de Movimientos — filtros por mes/día + comparación mensual
+
+**Página propia en el sidebar** (antes solo vivía como modal desde el
+POS): muestra **absolutamente todos los movimientos** — ingresos por
+venta, abonos de fiados, egresos manuales — ordenados de más reciente
+a más antiguo, sin excepción.
+
+- **Filtro por mes**: selector con los últimos 12 meses (por defecto,
+  el mes actual). Elegir un mes ajusta automáticamente el rango de
+  fechas a ese mes completo.
+- **Filtro por día exacto**: campos "Desde"/"Hasta" para acotar a un
+  rango específico de días — al usarlos, el selector de mes se
+  desmarca (ya no es "un mes completo").
+- **Resumen del período filtrado**: Ingresos, Egresos, Balance y total
+  de movimientos, siempre visibles arriba de la tabla.
+- El acceso rápido "Movimientos" del topbar del POS ahora abre esta
+  misma vista dentro de un modal más ancho — cero lógica duplicada
+  (`movementsView.js` es la única fuente de verdad, usada tanto por la
+  página como por el modal).
+
+### Resumen — incremento/descenso vs. mes anterior
+
+La pantalla "Resumen" ahora muestra una tarjeta de comparación con el
+mes calendario anterior completo, para Ingresos y Egresos por
+separado, con flecha y color:
+
+- 🟢 verde = favorable (ingresos subieron, o egresos bajaron)
+- 🔴 rojo = desfavorable (ingresos bajaron, o egresos subieron)
+- Si el mes anterior no tuvo movimientos, se muestra "Sin datos del
+  mes anterior para comparar" en vez de un porcentaje sin sentido
+  (dividir por cero) — probé este caso explícitamente.
+
+Agregué `tests/movements.test.js` (5 pruebas, con un repositorio en
+memoria — sin Supabase ni navegador) que verifica: el caso "mes
+anterior en $0", un incremento (+50%), un descenso (-50%), y que
+movimientos de hace 2+ meses no contaminan la comparación actual/
+anterior. `npm test` ahora corre las tres suites.
 
 ---
 
@@ -518,3 +585,49 @@ innecesaria antes de tiempo:
 La arquitectura por capas ya está preparada para todo esto sin
 romper las reglas de negocio (ver sección "Reglas de dependencias"
 más abajo).
+
+---
+
+## Módulos V2 (Catálogo, Inventario, Proveedores, Compras, Reportes, Configuración, Auditoría)
+
+Reemplazan a los antiguos "Próximamente". Cada uno sigue la misma arquitectura
+(pantalla → caso de uso → repositorio Supabase) y tiene su migración en
+`supabase/migrations/`. **Aplícalas en orden** (001 → 006) en el SQL Editor de
+Supabase o con `supabase db push`:
+
+| Migración | Módulo | Qué agrega |
+|---|---|---|
+| `001_catalogo.sql` | Catálogo | SKU único por empresa, categoría única por nombre |
+| `002_inventario.sql` | Inventario | `stock_minimo`, motivo/usuario en movimientos, RPC `ajustar_inventario` |
+| `003_proveedores_compras.sql` | Proveedores / Compras | tablas `proveedores`, `ordenes_compra`, `detalle_compras`, `productos.costo`, RPC crear/recibir/cancelar |
+| `004_reportes.sql` | Reportes | RPC `reporte_ventas` (agregados en SQL) |
+| `005_configuracion.sql` | Configuración | datos de contacto, logo y colores; `empresas_update` exige `MANAGE_SETTINGS` |
+| `006_auditoria.sql` | Auditoría | tabla inmutable `auditoria` + triggers en las tablas clave |
+| `007_seguridad_rls.sql` | Seguridad | permisos reales en RLS, usuarios desactivados sin acceso, escrituras directas cerradas, caja única abierta |
+| `008_ventas_integridad.sql` | Ventas | validación de descuentos/cantidades, `anular_venta`, costo congelado, cupo de crédito por RPC |
+| `009_setup_business.sql` | Registro | `setup_business` valida usuario, permisos y lo ata a la cuenta de Auth |
+
+Pruebas: `npm test` (incluye `tests/modules.test.js`, que prueba los casos de uso con repositorios falsos).
+Las migraciones SQL **no tienen pruebas automáticas**: validarlas contra la base es un paso pendiente.
+
+
+### Seguridad: qué se corrigió (migraciones 007–009)
+
+- **RBAC en la base, no solo en la interfaz.** Productos/categorías exigen `MANAGE_PRODUCTS`; caja y movimientos
+  `OPEN_CLOSE_CASH`; roles `MANAGE_ROLES`; usuarios `MANAGE_USERS`; empresa y sucursales `MANAGE_SETTINGS`.
+- **Escrituras directas cerradas** en `ventas`, `detalle_ventas` y `movimientos_inventario`: solo las RPC las escriben.
+  `stock`, `costo` y `deuda_actual` ya no se pueden actualizar con un `update` desde el navegador.
+- **Usuario desactivado = sin acceso inmediato** (`current_empresa_id()` y `has_permission()` exigen `activo`).
+- **Ventas validadas en el servidor:** descuento entre 0 y el valor de la línea, cantidad > 0, producto activo,
+  método válido, pago suficiente; líneas repetidas se agrupan y los productos se bloquean en orden.
+- **Anulación de ventas** (`anular_venta`, permiso `CANCEL_SALES`): repone stock, revierte caja o deuda, guarda motivo/autor/fecha.
+- **Un solo `OPEN` por empresa** (índice único) y los movimientos de caja se vinculan a la caja abierta.
+- **XSS:** `escapeHtml` central (escapa comillas) y `safeImageUrl` (solo http(s)/data:image) en lugar de 12 copias.
+- Contraseña mínima de 8 y usuario `[a-z0-9._-]{3,30}` (cliente, Edge Function y CHECK de la base).
+- `server.js`: ya no se cae con `%` mal formado y solo sirve `index.html`, `src`, `styles` y `assets`.
+
+**Pendiente de tu lado (no es código):**
+1. En Supabase → Authentication → activar *Leaked password protection*.
+2. Valorar cerrar el registro público o añadir captcha (hoy cualquiera puede crear un negocio).
+3. Volver a desplegar la Edge Function si cambias `supabase/functions/create-staff-user/index.ts`.
+4. La versión de `supabase-js` quedó fija en `2.45.4` (`src/infrastructure/supabaseClient.js`); verifícala en esm.sh.
