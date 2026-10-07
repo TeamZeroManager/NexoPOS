@@ -64,6 +64,13 @@ export function makeSaleUseCases({ productRepository, saleRepository, customerRe
 
   return {
     /** Todas las ventas registradas, sin filtro — usado por Resumen (sección 40). */
+    /** Anula una venta (requiere CANCEL_SALES; la base lo verifica). El motivo es obligatorio. */
+    async cancelSale(saleId, reason) {
+      if (!saleId) throw new ValidationError('Selecciona una venta', 'saleId');
+      if (!reason || reason.trim().length < 3) throw new ValidationError('Indica el motivo de la anulación (mínimo 3 caracteres)', 'reason');
+      return saleRepository.cancelTransactional(saleId, reason.trim());
+    },
+
     async listAllSales() {
       return saleRepository.findAll();
     },

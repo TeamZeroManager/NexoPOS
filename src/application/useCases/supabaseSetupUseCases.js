@@ -3,6 +3,7 @@ import { getEmpresaId, clearEmpresaIdCache } from '../../infrastructure/supabase
 import { ALL_PERMISSIONS } from '../../shared/constants/permissions.js';
 import { ValidationError } from '../../shared/errors/ValidationError.js';
 import { usernameToEmail } from './supabaseAuthUseCases.js';
+import { assertPasswordStrength, assertValidUsername } from '../../domain/rules/authRules.js';
 
 /**
  * makeSupabaseSetupUseCases
@@ -16,16 +17,34 @@ import { usernameToEmail } from './supabaseAuthUseCases.js';
 export function makeSupabaseSetupUseCases({ staffUserRepository, roleRepository }) {
   return {
     async setupBusiness({ businessName, nit, branchName, cashPointName, adminName, username, password }) {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: usernameToEmail(username),
+      const cleanUsername = (username ?? '').trim().toLowerCase();
+      assertValidUsername(cleanUsername);
+      assertPasswordStrength(password);
+
+      let { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: usernameToEmail(cleanUsername),
         password,
       });
 
+      if (signUpError && /already registered|already exists/i.test(signUpError.message)) {
+        // Si un intento anterior creó la cuenta de Auth pero falló el resto del registro,
+        // la cuenta quedó "huérfana". Con las MISMAS credenciales se retoma el registro;
+        // si la cuenta ya tiene negocio (o la clave no coincide), el nombre está realmente ocupado.
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: usernameToEmail(cleanUsername),
+          password,
+        });
+        const alreadyHasBusiness = !signInError && (await staffUserRepository.findById(signInData.user.id));
+        if (signInError || alreadyHasBusiness) {
+          if (!signInError) await supabase.auth.signOut();
+          throw new ValidationError('Ese nombre de usuario ya está en uso', 'username');
+        }
+        signUpData = signInData;
+        signUpError = null;
+      }
+
       if (signUpError) {
-        const message = /already registered|already exists/i.test(signUpError.message)
-          ? 'Ese nombre de usuario ya está en uso'
-          : signUpError.message;
-        throw new ValidationError(message, 'username');
+        throw new ValidationError(signUpError.message, 'username');
       }
 
       if (!signUpData?.session) {
@@ -47,12 +66,14 @@ export function makeSupabaseSetupUseCases({ staffUserRepository, roleRepository 
         p_sucursal: branchName,
         p_caja: cashPointName,
         p_admin_nombre: adminName,
-        p_username: username.trim().toLowerCase(),
+        p_username: cleanUsername,
         p_permisos: ALL_PERMISSIONS,
       });
 
       if (setupError) {
-        throw new ValidationError(setupError.message, 'setup');
+        // La cuenta de Auth ya existe: al corregir el dato y reintentar con el mismo usuario y
+        // contraseña el registro se retoma (ver recuperación arriba).
+        throw new ValidationError(`${setupError.message}. Corrige el dato y vuelve a intentarlo con el mismo usuario y contraseña.`, 'setup');
       }
 
       const empresaId = await getEmpresaId();

@@ -1,5 +1,5 @@
 import { createStaffUser } from '../../domain/entities/StaffUser.js';
-import { assertPasswordStrength, assertUniqueUsername } from '../../domain/rules/authRules.js';
+import { assertPasswordStrength, assertUniqueUsername, assertValidUsername } from '../../domain/rules/authRules.js';
 import { hashPassword } from '../../shared/utils/crypto.js';
 
 /**
@@ -20,6 +20,7 @@ export function makeStaffUserUseCases({ staffUserRepository, roleRepository }) {
     },
 
     async createUser({ name, username, password, roleId }) {
+      assertValidUsername(username);
       assertPasswordStrength(password);
 
       if (staffUserRepository.createViaEdgeFunction) {

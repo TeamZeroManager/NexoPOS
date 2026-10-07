@@ -2,7 +2,7 @@ import { createBusiness } from '../../domain/entities/Business.js';
 import { createBranch } from '../../domain/entities/Branch.js';
 import { createRole } from '../../domain/entities/Role.js';
 import { createStaffUser } from '../../domain/entities/StaffUser.js';
-import { assertPasswordStrength, assertUniqueUsername } from '../../domain/rules/authRules.js';
+import { assertPasswordStrength, assertUniqueUsername, assertValidUsername } from '../../domain/rules/authRules.js';
 import { hashPassword } from '../../shared/utils/crypto.js';
 import { ALL_PERMISSIONS } from '../../shared/constants/permissions.js';
 
