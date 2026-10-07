@@ -21,7 +21,23 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// CORS: la app corre en un dominio distinto (ej. vercel.app) al de la
+// funcion (supabase.co) -- sin estos encabezados el navegador bloquea
+// la peticion ANTES de que llegue aqui (falla el preflight OPTIONS),
+// y supabase-js lo reporta como "Failed to send a request to the Edge
+// Function" sin mas detalle. (Bug real encontrado en producción — ver
+// README.)
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "No autorizado" }, 401);
@@ -55,9 +71,15 @@ Deno.serve(async (req: Request) => {
     if (!nombre || !username || !password || !rolId) {
       return json({ error: "Faltan campos requeridos" }, 400);
     }
-    if (String(password).length < 6) {
-      return json({ error: "La contrasena debe tener minimo 6 caracteres" }, 400);
+    if (String(password).length < 8) {
+      return json({ error: "La contrasena debe tener minimo 8 caracteres" }, 400);
     }
+    // Mismo patron que el CHECK de la base (usuarios_username_formato): evita '@', espacios, etc.
+    const cleanUsername = String(username).trim().toLowerCase();
+    if (!/^[a-z0-9._-]{3,30}$/.test(cleanUsername)) {
+      return json({ error: "El usuario debe tener 3-30 caracteres: letras, numeros, punto, guion o guion bajo" }, 400);
+    }
+    if (String(nombre).trim().length === 0) return json({ error: "El nombre es obligatorio" }, 400);
 
     const adminClient = createClient(supabaseUrl, serviceKey);
 
@@ -69,7 +91,7 @@ Deno.serve(async (req: Request) => {
       .single();
     if (roleError || !role) return json({ error: "Rol invalido" }, 400);
 
-    const syntheticEmail = `${String(username).toLowerCase()}@pos.local`;
+    const syntheticEmail = `${cleanUsername}@pos.local`;
 
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email: syntheticEmail,
@@ -77,17 +99,24 @@ Deno.serve(async (req: Request) => {
       email_confirm: true,
     });
     if (createError || !created?.user) {
-      const msg = /already.*registered|already.*exists/i.test(createError?.message ?? "")
-        ? "Ese nombre de usuario ya está en uso"
-        : createError?.message ?? "No se pudo crear el usuario";
+      const raw = createError?.message ?? "";
+      const code = (createError as any)?.code ?? "";
+      let msg: string;
+      if (code === "email_exists" || /already.*registered|already.*exists/i.test(raw)) {
+        msg = "Ese nombre de usuario ya est\u00e1 en uso";
+      } else if (code === "weak_password" || /weak|easy to guess|known to be|should contain|at least \d+ char/i.test(raw)) {
+        msg = "La contrase\u00f1a es demasiado d\u00e9bil o muy conocida. Usa una m\u00e1s segura: m\u00ednimo 8 caracteres, con letras y n\u00fameros.";
+      } else {
+        msg = raw || "No se pudo crear el usuario";
+      }
       return json({ error: msg }, 400);
     }
 
     const { error: insertError } = await adminClient.from("usuarios").insert({
       id: created.user.id,
       empresa_id: (caller as any).empresa_id,
-      nombre,
-      username: String(username).toLowerCase(),
+      nombre: String(nombre).trim(),
+      username: cleanUsername,
       rol_id: rolId,
       activo: true,
     });
@@ -107,6 +136,6 @@ Deno.serve(async (req: Request) => {
 function json(data: unknown, status: number) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
